@@ -1,0 +1,23 @@
+services:
+  ue4-manager:
+    build: .
+    restart: unless-stopped
+    environment:
+      EU4_API_TOKEN: ${EU4_API_TOKEN:-}
+      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD:?Set a strong dashboard password in .env}
+      SESSION_SECRET: ${SESSION_SECRET:?Set a random signing secret in .env}
+      EU4_API_BASE: ${EU4_API_BASE:-https://www.empire-universe.com/api/v1}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      DATABASE_PATH: /data/ue4-manager.sqlite3
+      PORT: 8080
+    volumes:
+      - ue4_data:/data
+    ports:
+      - "127.0.0.1:${UE4_PORT:-8080}:8080"
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+volumes:
+  ue4_data:
