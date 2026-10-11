@@ -271,8 +271,8 @@ class Handler(BaseHTTPRequestHandler):
         path = urlsplit(self.path).path
         if path == '/healthz':
             return self.json_response({'ok': True})
-        if path in ('/', '/app.js', '/styles.css', '/favicon.svg'):
-            name = {'/': 'index.html', '/app.js': 'app.js', '/styles.css': 'styles.css', '/favicon.svg': 'favicon.svg'}[path]
+        if path in ('/', '/app.js', '/mines.js', '/styles.css', '/mines.css', '/favicon.svg'):
+            name = {'/': 'index.html', '/app.js': 'app.js', '/mines.js': 'mines.js', '/styles.css': 'styles.css', '/mines.css': 'mines.css', '/favicon.svg': 'favicon.svg'}[path]
             types = {'.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml'}
             body = (WEB / name).read_bytes()
             self.headers_common(types[Path(name).suffix] + '; charset=utf-8', len(body))
