@@ -34,6 +34,9 @@ PASSWORD = os.environ.get('DASHBOARD_PASSWORD', '')
 TOKEN = os.environ.get('EU4_API_TOKEN', '')
 COOKIE_SECURE = os.environ.get('COOKIE_SECURE', 'true').lower() != 'false'
 SESSION_LIFETIME = 12 * 3600
+LOGIN_FAILURES = {}  # address -> failed-attempt timestamps; bounded and pruned
+LOGIN_WINDOW = 15 * 60
+LOGIN_MAX_FAILURES = 8
 LOG = logging.getLogger('ue4-manager')
 
 
@@ -307,12 +310,22 @@ class Handler(BaseHTTPRequestHandler):
                 body = self.get_body()
             except SyncError as exc:
                 return self.json_response({'error': str(exc)}, exc.status)
+            address = self.client_address[0]
+            with LOCK:
+                failures = [t for t in LOGIN_FAILURES.get(address, []) if t >= now() - LOGIN_WINDOW]
+                LOGIN_FAILURES[address] = failures
+                if len(failures) >= LOGIN_MAX_FAILURES:
+                    return self.json_response({'error': 'Too many failed login attempts. Try again later.'}, 429)
             submitted = body.get('password', '')
             # Cap length to protect from trivially costly requests.
             valid = isinstance(submitted, str) and len(submitted) < 4096 and hmac.compare_digest(submitted.encode(), PASSWORD.encode())
             if not valid:
+                with LOCK:
+                    LOGIN_FAILURES.setdefault(address, []).append(now())
                 time.sleep(0.12)
                 return self.json_response({'error': 'Incorrect password.'}, 401)
+            with LOCK:
+                LOGIN_FAILURES.pop(address, None)
             attrs = f'Path=/; HttpOnly; SameSite=Strict; Max-Age={SESSION_LIFETIME}'
             if COOKIE_SECURE:
                 attrs += '; Secure'
@@ -351,6 +364,8 @@ def main():
         raise SystemExit('DASHBOARD_PASSWORD is required. Set it in your deployment environment.')
     if len(PASSWORD) < 12:
         raise SystemExit('DASHBOARD_PASSWORD must contain at least 12 characters.')
+    if len(SESSION_KEY) < 32:
+        raise SystemExit('SESSION_SECRET must contain at least 32 characters.')
     if not COOKIE_SECURE:
         LOG.warning('COOKIE_SECURE=false; use only on local HTTP development.')
     init_db()

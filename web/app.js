@@ -156,7 +156,7 @@ function tasksPage(){
 function researchPage(){const path='/me/research',d=getData(path),rows=getRows(path);detailRows=rows;
  return pageHeading('SCIENCE & TECHNOLOGY','Research','Review unlocked technologies, active research and the research reference catalog.',button('refresh-one',`${icon('refresh')} Sync research`,'primary',`data-path="${path}"`)+button('navigate',`${icon('layers')} Research catalog`,'ghost','data-view="catalog" data-catalog="/reference/research"'))+datasetNotice(path)+
  panel('Research progress','The complete current technology tree data, if exposed by the API.',tableSearch()+listTable(rows))+
- panel('Research payload','Unmodified API response for advanced technology analysis',rawBox(d));}
+ panel('Research payload','Unmodified API response for advanced technology analysis',rawBox(d,path));}
 function commandersPage(){return dataSection('Personnel','/me/commanders','Commanders, scientists, assignments, skills and specialization points.');}
 function paPage(){return dataSection('Construction budget','/me/pa','Review available and used construction capacity and budget allocations.');}
 function relationsPage(){return dataSection('Diplomacy','/me/relations','Your empire membership, roles, alliances and relationship data.');}
@@ -188,13 +188,13 @@ function catalogPage(){const choices=state.status?.reference||['/reference','/re
  return pageHeading('GAME KNOWLEDGE BASE','Reference library','Browse ships, equipment, structures, research and public game constants.',button('refresh-reference',`${icon('refresh')} Sync all catalogs`,'primary')+button('export-path',`${icon('download')} Export selection`,'ghost',`data-path="${esc(p)}"`))+
  `<div class="tab-strip">${choices.map(path=>button('catalog',esc(path.split('/').at(-1)).replace(/^reference$/,'Overview'),path===p?'tab active':'tab',`data-path="${esc(path)}"`)).join('')}</div>`+datasetNotice(p)+
  panel('Catalog browser',`${rows.length} entries · ${p}`,tableSearch()+listTable(rows))+
- panel('Unmodified catalog payload','Useful when a reference dataset is an object rather than a simple record list.',rawBox(getData(p)));
+ panel('Unmodified catalog payload','Useful when a reference dataset is an object rather than a simple record list.',rawBox(getData(p),p));
 }
-function rawBox(data){return data==null?empty('No cached response','Sync this endpoint to inspect its original JSON.'): `<div class="raw-head">${button('copy-json',`${icon('box',15)} Copy JSON`,'ghost')}</div><pre class="json-view">${esc(safeJSON(data))}</pre>`;}
+function rawBox(data,path){return data==null?empty('No cached response','Sync this endpoint to inspect its original JSON.'): `<div class="raw-head">${button('copy-json',`${icon('box',15)} Copy JSON`,'ghost',`data-path="${esc(path)}"`)}</div><pre class="json-view">${esc(safeJSON(data))}</pre>`;}
 function explorerPage(){const choices=state.status?.endpoints||[];const p=state.explorer;const d=getData(p);detailRows=getRows(p);
  return pageHeading('DEVELOPER TOOLKIT','API explorer','Inspect complete raw responses and individual cache timestamps.',button('refresh-one',`${icon('refresh')} Sync endpoint`,'primary',`data-path="${esc(p)}"`)+button('export-path',`${icon('download')} Export JSON`,'ghost',`data-path="${esc(p)}"`))+
  `<div class="endpoint-selector"><label for="endpoint-select">Endpoint</label><select id="endpoint-select">${choices.map(v=>`<option value="${esc(v)}" ${v===p?'selected':''}>GET /api/v1${esc(v)}</option>`).join('')}</select></div>`+
- datasetNotice(p)+panel(`GET /api/v1${p}`,'Exact response from the most recent successful sync',rawBox(d));
+ datasetNotice(p)+panel(`GET /api/v1${p}`,'Exact response from the most recent successful sync',rawBox(d,p));
 }
 function settingsPage(){const u=state.status?.usage||{},data=state.status?.cache||{};const pct=Math.min(100,(u.used||0)/(u.limit||50)*100);
  return pageHeading('CONFIGURATION','Settings & data','Monitor your local API budget, manage exports and secure your installation.',button('logout',`${icon('logout')} Sign out`,'ghost'))+
@@ -231,7 +231,7 @@ document.addEventListener('click',e=>{const element=e.target.closest('[data-acti
  else if(a==='export-path'){const p=element.dataset.path;downloadJSON(`ue4-${p.replace(/\W+/g,'-')}-${new Date().toISOString().slice(0,10)}.json`,getData(p));}
  else if(a==='export-all')downloadJSON('ue4-latest.json',state.payload);
  else if(a==='export-history')downloadJSON('ue4-history.json',state.history);
- else if(a==='copy-json')navigator.clipboard.writeText(safeJSON(getData(state.view==='catalog'?state.catalog:state.explorer))).then(()=>toast('Copied to clipboard.')).catch(()=>toast('Could not copy.'));
+ else if(a==='copy-json')navigator.clipboard.writeText(safeJSON(getData(element.dataset.path||state.explorer))).then(()=>toast('Copied to clipboard.')).catch(()=>toast('Could not copy.'));
  else if(a==='copy-detail')navigator.clipboard.writeText(safeJSON(state.modal?.data)).then(()=>toast('Record copied.')).catch(()=>toast('Could not copy.'));
  else if(a==='logout')request('/auth/logout',{method:'POST',body:'{}'}).then(()=>{state.payload={};state.history=[];loginView();}).catch(ex=>toast(ex.message));
 });

@@ -39,6 +39,7 @@ class IntegrationTest(unittest.TestCase):
         server.SESSION_KEY = b'unit-test-only-session-signing-key'
         server.COOKIE_SECURE = False
         server.init_db()
+        server.LOGIN_FAILURES.clear()
         self.http = server.ThreadingHTTPServer(('127.0.0.1', 0), server.Handler)
         self.host = f'127.0.0.1:{self.http.server_address[1]}'
         self.thread = threading.Thread(target=self.http.serve_forever, daemon=True)
@@ -93,6 +94,13 @@ class IntegrationTest(unittest.TestCase):
         self.assertEqual(len(payload['endpoints']), 15)
         self.assertEqual(payload['usage']['remaining'], 50)
         self.assertEqual(self.req('/api/status', cookie=cookie+'corrupted')[0], 401)
+
+    def test_login_rate_limited_after_failed_attempts(self):
+        for _ in range(server.LOGIN_MAX_FAILURES):
+            self.assertEqual(self.req('/auth/login', 'POST', {'password': 'invalid'})[0], 401)
+        status, _, body = self.req('/auth/login', 'POST', {'password': server.PASSWORD})
+        self.assertEqual(status, 429)
+        self.assertIn('Too many', body['error'])
 
     def test_sync_cache_history_and_quota(self):
         cookie = self.login()
