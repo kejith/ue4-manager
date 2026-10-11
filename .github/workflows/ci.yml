@@ -16,8 +16,13 @@ jobs:
       - name: Backend integration tests
         run: python -m unittest discover -s tests -v
       - name: Browser JS syntax
-        run: node --check web/app.js
+        run: |
+          node --check web/app.js
+          node --check web/mines.js
       - name: Render all dashboard pages
-        run: node tests/smoke.js
+        run: |
+          node tests/smoke.js
+          node tests/mines.js
+          node tests/mines_smoke.js
       - name: Build container
         run: docker build --tag ue4-manager:ci .

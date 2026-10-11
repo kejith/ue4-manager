@@ -24,15 +24,16 @@ const endpoints=Object.keys(fixture);
 const snapshot={endpoints:Object.fromEntries(endpoints.map(p=>[p,{updatedAt:1791000000,data:fixture[p]}]))};
 const mockFetch=async url=>({ok:true,json:async()=> url==='/api/status'?{configured:true,usage:{remaining:40,limit:50,used:10},cache:Object.fromEntries(endpoints.map(p=>[p,1791000000])),endpoints,core:endpoints.slice(0,9),reference:endpoints.slice(9)}:url==='/api/snapshot'?snapshot:{snapshots:[]}});
 const ctx=vm.createContext({document:{querySelector:()=>dom,addEventListener:()=>{}},fetch:mockFetch,location:{host:'ue4.sane.run'},window:{scrollTo:()=>{}},navigator:{},Intl,Date,Math,Number,JSON,String,Object,Array,Map,Set,RegExp,URL,setTimeout,clearTimeout,localStorage:{getItem:()=>null,setItem:()=>{}},console});
+vm.runInContext(fs.readFileSync('web/mines.js','utf8'),ctx,{filename:'web/mines.js'});
 vm.runInContext(fs.readFileSync('web/app.js','utf8'),ctx,{filename:'web/app.js'});
 setTimeout(()=>{
  try{
-  for(const v of ['overview','planets','fleets','tasks','research','commanders','pa','vision','relations','analytics','catalog','explorer','settings']){
+  for(const v of ['overview','planets','mines','fleets','tasks','research','commanders','pa','vision','relations','analytics','catalog','explorer','settings']){
    vm.runInContext(`state.view=${JSON.stringify(v)};render()`,ctx);
    assert.ok(dom.innerHTML.includes('UE4 MANAGER'),`${v}: shell missing`);
    assert.ok(dom.innerHTML.includes('page-heading'),`${v}: page missing`);
   }
   assert.ok(dom.innerHTML.includes('remaining / 50'));
-  console.log('13 dashboard page render smoke checks passed');
+  console.log('14 dashboard page render smoke checks passed');
  }catch(e){console.error(e);process.exitCode=1;}
 },25);

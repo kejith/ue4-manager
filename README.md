@@ -6,6 +6,7 @@ Self-hosted, mobile-responsive intelligence dashboard for the [Empire Universe 4
 
 - **Command center:** player identity, colony and fleet counts, resource summary, near-term task activity, cached-data freshness.
 - **Planets & economy:** all owned colonies, searchable details, aggregated resource inventories, and a persistent per-browser resource-target planner.
+- **Mine investment planner:** detected mine levels by colony, upgrade cost and incremental-production inputs, resource value ratios, affordability, amortization, and 30-day ROI. Source values are read from API snapshots and explicit per-level reference records when available; otherwise you supply assumptions. Saved per mine/level in your browser.
 - **Fleets:** searchable fleet inventory and full nested ship, module, XP, fuel, cargo, and assignment payload inspection.
 - **Production timeline:** active tasks and completion ETA countdowns whenever ETA fields exist.
 - **Research & personnel:** technology state, queues, commanders, scientists, and specialization data as returned by the API.
@@ -84,11 +85,28 @@ Each sync reads only allowlisted game endpoints. A failed sync does not erase ca
 
 The app never guesses production rates, build costs, research prerequisites, or fleet battle outcomes if the API has not supplied those formulas. Nested/heterogeneous payloads remain explorable as JSON.
 
+## Mine upgrade planner
+
+Open **Mine planner** after syncing **Planets**. Optionally sync **Reference buildings** to prefill explicit per-level details where the game returns them. The view lists identified mines, their current levels and proposed next upgrades. Enter or correct: output resource, upgrade cost (`ore:1000, crystal:200`), extra units produced each hour, current units/hour (required only when downtime is enabled), and construction hours. These values are saved in this browser for that mine and upgrade level; subsequent game syncs do not overwrite overrides. No extra API calls are made by the calculations.
+
+With a resource weight `w` (default all 1, e.g. `ore:1, crystal:2`), the estimate is:
+
+- Weighted upgrade cost: sum of `cost[resource] × w[resource]`.
+- Weighted hourly gain: `extraProducedPerHour × w[outputResource]`.
+- Optional construction opportunity loss: `currentProductionPerHour × buildHours × w[outputResource]` when mining stops during construction.
+- **Payback after starting construction:** `buildHours + (weightedCost + lostProduction) / weightedHourlyGain`.
+- **30-day ROI:** `(weightedHourlyGain × max(0, 720 - buildHours) - weightedCost - lostProduction) / weightedCost × 100%`; shown as unavailable for zero-cost upgrades.
+
+Upgrades with unknown costs, gain, output type or build duration are **not** ranked. Affordability is assessed against current per-planet resource inventories only when all required resource keys appear; otherwise it is unknown. Rankings compare **one next-level upgrade per mine**, not multi-upgrade long-term strategies. Results do not account for energy, production caps, bonuses, game mechanics not reported by the API, continuing expenses or other possible effects. The public API is read-only; this planner does not place construction orders.
+
 ## Tests
 
 ```bash
 python3 -m unittest discover -s tests -v
 node --check web/app.js   # optional: requires Node.js
+node --check web/mines.js
+node tests/mines.js
+node tests/mines_smoke.js
 ```
 
 Tests stub the upstream API and use a local HTTP server; they do not require an Empire Universe token or internet access. No end-to-end check against a live game token has been run as part of development.
